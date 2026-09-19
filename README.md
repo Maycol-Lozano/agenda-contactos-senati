@@ -53,7 +53,7 @@ Para el desarrollo de este laboratorio, se tomaron las siguientes decisiones de 
 4.  **Estilizado Moderno y Responsivo con Tailwind CSS:** Se optó por Tailwind CSS para un desarrollo rápido y flexible de la interfaz, logrando un diseño moderno, totalmente responsivo y con soporte nativo para el cambio de tema entre **Modo Claro** y **Modo Oscuro**[cite: 4].
 
 ## AQUI ESTA MI VIDEO MAS O MENOS
-https://www.loom.com/share/5b104ed84e804530bb88f5bbb795624a
+[Videito](https://www.loom.com/share/5b104ed84e804530bb88f5bbb795624a)
 
 ---
 *Desarrollado por [cite: Maycol Lozano]*
