@@ -1,10 +1,8 @@
-<<<<<<< HEAD
-import { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import { useContactos } from './hooks/useContactos';
-import Estadisticas from './components/Estadisticas';
-import ContactoForm from './components/ContactoForm';
+import DialogoConfirmar from './components/DialogoConfirmar';
+import { Estadisticas } from './components/Estadisticas';
 import ContactoCard from './components/ContactoCard';
-// 1. IMPORTAS LAS DOS FUNCIONES DE DATABASE
 import { exportarBaseDatos, importarBaseDatos } from './db/database';
 
 export default function App() {
@@ -24,290 +22,320 @@ export default function App() {
     favorito
   } = useContactos();
 
-  const [editando, setEditando] = useState(null);
+  // Estados del formulario de contactos
+  const [nombre, setNombre] = useState('');
+  const [apellido, setApellido] = useState('');
+  const [telefono, setTelefono] = useState('');
+  const [email, setEmail] = useState('');
+  const [grupoId, setGrupoId] = useState('');
+  const [cumple, setCumple] = useState('');
+  const [notas, setNotas] = useState('');
+  const [esFavorito, setEsFavorito] = useState(false);
+  const [idEditar, setIdEditar] = useState(null);
 
-  // 2. CREAS EL REF Y LA FUNCIÓN DE IMPORTACIÓN AQUÍ
-  const fileInputRef = useRef(null);
+  // Estado para crear un nuevo grupo
+  const [nuevoGrupo, setNuevoGrupo] = useState('');
 
-  const handleImportar = async (e) => {
-    const archivo = e.target.files[0];
-    if (!archivo) return;
-
-    if (window.confirm('¿Deseas reemplazar la base de datos actual con este archivo agenda.db?')) {
-      await importarBaseDatos(archivo);
-    }
-    e.target.value = '';
-  };
+  // Estado para el modal de confirmación
+  const [modalEliminar, setModalEliminar] = useState({ abierto: false, id: null, nombre: '' });
 
   if (!listos) {
     return (
-      <div className="flex h-screen items-center justify-center bg-slate-100 text-slate-600 dark:bg-slate-950 dark:text-slate-300">
-        Cargando base de datos...
+      <div className="flex h-screen items-center justify-center bg-slate-50">
+        <p className="text-gray-500 font-medium">Cargando base de datos SQLite...</p>
       </div>
     );
   }
 
-  const handleGuardar = (datos) => {
-    let exito = false;
-    if (editando) {
-      exito = actualizar(editando.id, datos);
-      if (exito) setEditando(null);
-    } else {
-      exito = crear(datos);
+  const limpiarFormulario = () => {
+    setNombre('');
+    setApellido('');
+    setTelefono('');
+    setEmail('');
+    setGrupoId('');
+    setCumple('');
+    setNotas('');
+    setEsFavorito(false);
+    setIdEditar(null);
+  };
+
+  const prepararEdicion = (c) => {
+    setIdEditar(c.id);
+    setNombre(c.nombre || '');
+    setApellido(c.apellido || '');
+    setTelefono(c.telefono || '');
+    setEmail(c.email || '');
+    setGrupoId(c.grupo_id || '');
+    setCumple(c.cumple || '');
+    setNotas(c.notas || '');
+    setEsFavorito(Boolean(c.favorito));
+  };
+
+  const manejarGuardar = (e) => {
+    e.preventDefault();
+    if (!nombre.trim() || !telefono.trim()) {
+      alert('Nombre y teléfono son obligatorios.');
+      return;
     }
-    return exito;
+
+    const grupoSel = grupos.find((g) => String(g.id) === String(grupoId));
+
+    const datosContacto = {
+      nombre,
+      apellido,
+      telefono,
+      email,
+      categoria: grupoSel ? grupoSel.nombre : 'Personal',
+      grupo_id: grupoId ? parseInt(grupoId, 10) : null,
+      cumple,
+      notas,
+      favorito: esFavorito
+    };
+
+    let exito = false;
+    if (idEditar) {
+      exito = actualizar(idEditar, datosContacto);
+    } else {
+      exito = crear(datosContacto);
+    }
+
+    if (exito) {
+      limpiarFormulario();
+    }
+  };
+
+  const manejarCrearGrupo = (e) => {
+    e.preventDefault();
+    if (!nuevoGrupo.trim()) return;
+    crearGrupo(nuevoGrupo.trim());
+    setNuevoGrupo('');
+  };
+
+  const abrirModalEliminar = (c) => {
+    setModalEliminar({
+      abierto: true,
+      id: c.id,
+      nombre: `${c.nombre} ${c.apellido}`.trim()
+    });
+  };
+
+  const confirmarEliminacion = () => {
+    if (modalEliminar.id) {
+      eliminar(modalEliminar.id);
+      setModalEliminar({ abierto: false, id: null, nombre: '' });
+    }
   };
 
   return (
-    <div className="min-h-screen bg-slate-100 p-4 font-sans text-slate-800 dark:bg-slate-950 dark:text-slate-100">
-      <div className="mx-auto max-w-2xl space-y-4">
-        <div className="flex items-center justify-between">
-          <h1 className="text-xl font-bold text-slate-900 dark:text-white">
-            Agenda de Contactos
-          </h1>
-
-          {/* 3. PEGAS ÚNICAMENTE LOS BOTONES EN LA PARTE SUPERIOR */}
-          <div className="flex gap-2">
-            <input
-              type="file"
-              accept=".db,.sqlite"
-              ref={fileInputRef}
-              onChange={handleImportar}
-              className="hidden"
-            />
-            <button
-              onClick={() => fileInputRef.current.click()}
-              className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:hover:bg-slate-800"
-            >
-              📥 Importar DB
-            </button>
-            <button
-              onClick={exportarBaseDatos}
-              className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:hover:bg-slate-800"
-            >
-              📤 Exportar DB
-            </button>
+    <div className="min-h-screen bg-slate-100 py-8 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-3xl mx-auto space-y-6">
+        
+        {/* Encabezado */}
+        <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex flex-wrap justify-between items-center gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-slate-800">Agenda de Contactos</h1>
+            <p className="text-xs text-slate-500">Gestión local SQLite & SENATI</p>
           </div>
-        </div>
-
-        <Estadisticas contactos={contactos} />
-
-        {error && (
-          <div className="rounded-lg bg-red-100 p-3 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">
-            {error}
-          </div>
-        )}
-
-        <ContactoForm
-          editando={editando}
-          grupos={grupos}
-          onGuardar={handleGuardar}
-          onCrearGrupo={crearGrupo}
-          onCancelar={() => setEditando(null)}
-        />
-
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <input
-            type="text"
-            placeholder="Buscar por nombre, tel, email o nota..."
-            value={texto}
-            onChange={(e) => setTexto(e.target.value)}
-            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-900 dark:text-white sm:w-2/3"
-          />
-
-          <select
-            value={categoria}
-            onChange={(e) => setCategoria(e.target.value)}
-            className="rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
-=======
-import { useContactos } from './hooks/useContactos';
-import { useDarkMode } from './hooks/useDarkMode';
-import ContactoForm from './components/ContactoForm';
-import ContactoCard from './components/ContactoCard';
-import Estadisticas from './components/Estadisticas';
-import ImportadorJSON from './components/ImportadorJSON';
-import { exportarContactosJSON } from './utils/contacto.js';
-
-export default function App() {
-  const [isDark, toggleDarkMode] = useDarkMode();
-
-  const {
-    contactos,
-    paginaActual,
-    totalPaginas,
-    setPaginaActual,
-    busqueda,
-    setBusqueda,
-    categoria,
-    setCategoria,
-    orden,
-    setOrden,
-    soloFavoritos,
-    setSoloFavoritos,
-    limpiarFiltros,
-    contactoEditar,
-    setContactoEditar,
-    guardar,
-    importar,
-    eliminar,
-    alternarFav
-  } = useContactos();
-
-  const selectClass = "rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none transition";
-
-  return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 p-4 md:p-8 transition-colors duration-200">
-      <div className="mx-auto max-w-3xl space-y-6">
-        <header className="flex items-center justify-between flex-wrap gap-3">
-          <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100">Agenda de Contactos SENATI</h1>
           <div className="flex items-center gap-2">
             <button
-              onClick={toggleDarkMode}
-              className="rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-1.5 text-xs font-medium text-slate-700 dark:text-slate-200 shadow-sm hover:bg-slate-100 dark:hover:bg-slate-700 transition"
-              title="Cambiar Modo Oscuro"
+              onClick={exportarBaseDatos}
+              className="px-3 py-1.5 text-xs bg-slate-700 hover:bg-slate-800 text-white rounded-lg transition flex items-center gap-1"
             >
-              {isDark ? '☀️ Claro' : '🌙 Oscuro'}
+              📥 Exportar .DB
             </button>
-            <ImportadorJSON onImportar={importar} />
-            <button
-              onClick={() => exportarContactosJSON(contactos)}
-              className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white shadow-sm hover:bg-emerald-700 transition"
-            >
-              📥 Exportar JSON
-            </button>
+            <label className="px-3 py-1.5 text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 rounded-lg cursor-pointer transition flex items-center gap-1">
+              📂 Importar .DB
+              <input
+                type="file"
+                accept=".db"
+                className="hidden"
+                onChange={(e) => {
+                  if (e.target.files[0]) importarBaseDatos(e.target.files[0]);
+                }}
+              />
+            </label>
           </div>
-        </header>
+        </div>
 
         {/* Panel de Estadísticas */}
         <Estadisticas contactos={contactos} />
 
-        {/* Formulario */}
-        <ContactoForm
-          contactoEditar={contactoEditar}
-          onGuardar={guardar}
-          onCancelar={() => setContactoEditar(null)}
-        />
+        {/* Formulario para Crear Grupo Nuevo */}
+        <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+          <form onSubmit={manejarCrearGrupo} className="flex gap-2 items-center">
+            <input
+              type="text"
+              placeholder="Nombre del nuevo grupo..."
+              value={nuevoGrupo}
+              onChange={(e) => setNuevoGrupo(e.target.value)}
+              className="p-2 border border-slate-300 rounded-lg text-sm flex-1 outline-none focus:border-blue-500"
+            />
+            <button
+              type="submit"
+              className="px-4 py-2 text-sm bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-lg transition"
+            >
+              + Crear Grupo
+            </button>
+          </form>
+        </div>
 
-        {/* Búsqueda Avanzada, Filtro, Orden y Favoritos */}
-        <div className="flex flex-col gap-2 sm:flex-row">
+        {/* Formulario Crear / Editar Contacto */}
+        <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+          <h2 className="text-base font-semibold text-slate-800 mb-4">
+            {idEditar ? 'Editar Contacto' : 'Nuevo Contacto'}
+          </h2>
+
+          {error && (
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-600 text-sm rounded-lg">
+              {error}
+            </div>
+          )}
+
+          <form onSubmit={manejarGuardar} className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <input
+                type="text"
+                placeholder="Nombre *"
+                value={nombre}
+                onChange={(e) => setNombre(e.target.value)}
+                className="p-2 border border-slate-300 rounded-lg text-sm w-full outline-none focus:border-blue-500"
+                required
+              />
+              <input
+                type="text"
+                placeholder="Apellido"
+                value={apellido}
+                onChange={(e) => setApellido(e.target.value)}
+                className="p-2 border border-slate-300 rounded-lg text-sm w-full outline-none focus:border-blue-500"
+              />
+              <input
+                type="text"
+                placeholder="Teléfono *"
+                value={telefono}
+                onChange={(e) => setTelefono(e.target.value)}
+                className="p-2 border border-slate-300 rounded-lg text-sm w-full outline-none focus:border-blue-500"
+                required
+              />
+              <input
+                type="email"
+                placeholder="Email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="p-2 border border-slate-300 rounded-lg text-sm w-full outline-none focus:border-blue-500"
+              />
+              <select
+                value={grupoId}
+                onChange={(e) => setGrupoId(e.target.value)}
+                className="p-2 border border-slate-300 rounded-lg text-sm w-full bg-white outline-none focus:border-blue-500"
+              >
+                <option value="">Seleccionar Grupo...</option>
+                {grupos.map((g) => (
+                  <option key={g.id} value={g.id}>
+                    {g.nombre}
+                  </option>
+                ))}
+              </select>
+              <input
+                type="date"
+                value={cumple}
+                onChange={(e) => setCumple(e.target.value)}
+                className="p-2 border border-slate-300 rounded-lg text-sm w-full outline-none focus:border-blue-500"
+              />
+            </div>
+
+            <textarea
+              placeholder="Notas..."
+              value={notas}
+              onChange={(e) => setNotas(e.target.value)}
+              className="p-2 border border-slate-300 rounded-lg text-sm w-full h-20 outline-none focus:border-blue-500"
+            />
+
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="fav"
+                checked={esFavorito}
+                onChange={(e) => setEsFavorito(e.target.checked)}
+                className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+              />
+              <label htmlFor="fav" className="text-sm text-slate-600 select-none">
+                Marcar como favorito
+              </label>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2">
+              {idEditar && (
+                <button
+                  type="button"
+                  onClick={limpiarFormulario}
+                  className="px-4 py-2 text-sm bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg transition"
+                >
+                  Cancelar
+                </button>
+              )}
+              <button
+                type="submit"
+                className="px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition"
+              >
+                {idEditar ? 'Guardar Cambios' : 'Agregar Contacto'}
+              </button>
+            </div>
+          </form>
+        </div>
+
+        {/* Buscador y Filtros por Grupo/Categoría */}
+        <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 space-y-3">
           <input
             type="text"
-            placeholder="Buscar por nombre, tel, email o nota..."
-            className="flex-1 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none transition"
-            value={busqueda}
-            onChange={(e) => setBusqueda(e.target.value)}
+            placeholder="Buscar por nombre, teléfono, email o notas..."
+            value={texto}
+            onChange={(e) => setTexto(e.target.value)}
+            className="p-2 border border-slate-300 rounded-lg text-sm w-full outline-none focus:border-blue-500"
           />
-
-          <select
-            className={selectClass}
-            value={categoria}
-            onChange={(e) => setCategoria(e.target.value)}
->>>>>>> fefcd915a1f91e61a6530f29a0649b35d94de09f
-          >
-            <option value="Todas">Todas</option>
-            <option value="Personal">Personal</option>
-            <option value="Trabajo">Trabajo</option>
-            <option value="SENATI">SENATI</option>
-            <option value="Familia">Familia</option>
-          </select>
-<<<<<<< HEAD
-        </div>
-
-        <div className="space-y-3">
-          {contactos.length === 0 ? (
-            <p className="py-8 text-center text-sm text-slate-500">
-              No se encontraron contactos.
-            </p>
-          ) : (
-            contactos.map((contacto) => (
-              <ContactoCard
-                key={contacto.id}
-                contacto={contacto}
-                onEditar={(c) => setEditando(c)}
-                onEliminar={eliminar}
-                onFavorito={favorito}
-              />
-            ))
-          )}
-        </div>
-=======
-
-          <select
-            className={selectClass}
-            value={orden}
-            onChange={(e) => setOrden(e.target.value)}
-          >
-            <option value="nombre_asc">Nombre (A-Z)</option>
-            <option value="nombre_desc">Nombre (Z-A)</option>
-            <option value="recientes">Más recientes</option>
-          </select>
-
-          <button
-            onClick={() => setSoloFavoritos(!soloFavoritos)}
-            className={`rounded-lg border px-3 py-2 text-sm font-medium transition flex items-center justify-center gap-1 ${
-              soloFavoritos
-                ? 'border-amber-400 bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400'
-                : 'border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700'
-            }`}
-            title="Filtrar solo favoritos"
-          >
-            ★ {soloFavoritos ? 'Ver todos' : 'Favoritos'}
-          </button>
-
-          {(busqueda || categoria !== 'Todas' || soloFavoritos) && (
-            <button
-              onClick={limpiarFiltros}
-              className="rounded-lg border border-red-300 dark:border-red-800 bg-red-50 dark:bg-red-950/30 px-3 py-2 text-xs font-medium text-red-600 dark:text-red-400 hover:bg-red-100 transition"
-              title="Limpiar filtros"
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <select
+              value={categoria}
+              onChange={(e) => setCategoria(e.target.value)}
+              className="p-2 border border-slate-300 rounded-lg text-sm bg-white outline-none focus:border-blue-500"
             >
-              ✕ Limpiar
-            </button>
-          )}
+              <option value="Todas">Todas las categorías/grupos</option>
+              {grupos.map((g) => (
+                <option key={g.id} value={g.nombre}>
+                  {g.nombre}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
 
-        {/* Lista de Contactos */}
-        <div className="space-y-3">
-          {contactos.length > 0 ? (
+        {/* Lista de Contactos (Renderizado con ContactoCard) */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {contactos.length === 0 ? (
+            <div className="col-span-full text-center py-8 text-slate-400 text-sm">
+              No hay contactos registrados.
+            </div>
+          ) : (
             contactos.map((c) => (
               <ContactoCard
                 key={c.id}
-                c={c}
-                onEditar={setContactoEditar}
-                onEliminar={eliminar}
-                onFavorito={alternarFav}
+                contacto={c}
+                alEditar={prepararEdicion}
+                alEliminar={abrirModalEliminar}
+                alFavorito={favorito}
               />
             ))
-          ) : (
-            <p className="text-center text-sm text-slate-500 dark:text-slate-400 py-4">
-              No se encontraron contactos.
-            </p>
           )}
         </div>
 
-        {/* Controles de Paginación */}
-        {totalPaginas > 1 && (
-          <div className="flex items-center justify-between border-t border-slate-200 dark:border-slate-800 pt-4">
-            <button
-              disabled={paginaActual === 1}
-              onClick={() => setPaginaActual((p) => Math.max(p - 1, 1))}
-              className="rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-50 transition"
-            >
-              ← Anterior
-            </button>
-            <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">
-              Página {paginaActual} de {totalPaginas}
-            </span>
-            <button
-              disabled={paginaActual === totalPaginas}
-              onClick={() => setPaginaActual((p) => Math.min(p + 1, totalPaginas))}
-              className="rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-50 transition"
-            >
-              Siguiente →
-            </button>
-          </div>
-        )}
->>>>>>> fefcd915a1f91e61a6530f29a0649b35d94de09f
       </div>
+
+      {/* Modal Confirmar Eliminar */}
+      <DialogoConfirmar
+        abierto={modalEliminar.abierto}
+        nombre={modalEliminar.nombre}
+        onConfirmar={confirmarEliminacion}
+        onCancelar={() => setModalEliminar({ abierto: false, id: null, nombre: '' })}
+      />
     </div>
   );
 }

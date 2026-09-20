@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 export const ESQUEMA = `
 PRAGMA foreign_keys = ON;
 
@@ -30,21 +29,4 @@ INSERT OR IGNORE INTO grupos (id, nombre, color) VALUES (1, 'Personal', '#3b82f6
 INSERT OR IGNORE INTO grupos (id, nombre, color) VALUES (2, 'Trabajo', '#10b981');
 INSERT OR IGNORE INTO grupos (id, nombre, color) VALUES (3, 'SENATI', '#f59e0b');
 INSERT OR IGNORE INTO grupos (id, nombre, color) VALUES (4, 'Familia', '#ef4444');
-=======
-export const ESQUEMA = `
-CREATE TABLE IF NOT EXISTS contactos (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  nombre TEXT NOT NULL,
-  apellido TEXT NOT NULL DEFAULT '',
-  telefono TEXT NOT NULL UNIQUE,
-  email TEXT,
-  categoria TEXT NOT NULL DEFAULT 'Personal' CHECK (categoria IN ('Personal', 'Trabajo', 'SENATI', 'Familia')),
-  favorito INTEGER NOT NULL DEFAULT 0 CHECK (favorito IN (0, 1)),
-  notas TEXT,
-  cumple TEXT,
-  creado_en TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
-);
-
-CREATE INDEX IF NOT EXISTS idx_contactos_nombre ON contactos (nombre);
->>>>>>> fefcd915a1f91e61a6530f29a0649b35d94de09f
 `;
